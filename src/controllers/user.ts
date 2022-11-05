@@ -14,7 +14,7 @@ export function register(req: Request,
         } = req.body;
   userExist(username, (isExist) => {
     if (!isExist) {
-      insertNewUser(username, password,(msg)=>{
+      insertNewUser(username, password, (msg) => {
         res.send(msg)
       });
     } else {
@@ -34,12 +34,16 @@ export function login(req: Request,
           password
         } = req.body;
   let allow = false;
-  getPassword(username, (passwordDB) => {
+  getPassword(username, (passwordDB, msg) => {
+    if (!passwordDB) {
+      res.send(msg);
+      return;
+    }
     allow = bcrypt.compareSync(password, passwordDB);
     if (!allow) {
       res.send({
         status: 1,
-        msg   : '登陆失败'
+        msg   : '密码错误,登陆失败'
       })
       return;
     }
@@ -47,7 +51,8 @@ export function login(req: Request,
     const tokenStr = jwt.sign({
       username
     }, secretKey, {expiresIn: '3000s'});
-    changeStatus(username, 1);
+    changeStatus(username, 1, () => {
+    });
     res.send({
       status: 0,
       msg   : '登陆成功',
@@ -65,14 +70,18 @@ export function getUserInfo(req: any,
     status: 1,
     msg   : '请先登陆'
   })
-  getUserInfoFromDB(username, (info) => {
+  console.log("get userInfo")
+  getUserInfoFromDB(username, (info, msg) => {
+    if (!info) {
+      res.send(msg);
+      return;
+    }
     const userObj = JSON.parse(info);
     const user = new User(userObj);
-    res.send({
-      status  : 0,
-      msg     : '获取用户信息成功',
+//     console.log(user)
+    res.send(Object.assign(msg, {
       userInfo: user
-    })
+    }))
   })
 }
 
@@ -85,11 +94,13 @@ export function setUserInfo(req: any,
     msg   : '请先登陆'
   })
   let {info} = req.body;
+  console.log(info)
   Object.assign(info, {
     username,
     status: 1
   })
   info = JSON.stringify(info);
-  const result = setUserInfoToDB(username, info);
-  res.send(result)
+  setUserInfoToDB(username, info, (msg) => {
+    res.send(msg)
+  });
 }

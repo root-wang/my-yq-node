@@ -1,6 +1,7 @@
 import Query from 'mysql2/typings/mysql/lib/protocol/sequences/Query';
 import {OkPacket, ResultSetHeader, RowDataPacket} from 'mysql2';
 import bcrypt from 'bcryptjs';
+import {User} from '../models/User';
 
 const mysql = require('mysql2');
 const {config} = require('../config/config')
@@ -12,7 +13,6 @@ const db = mysql.createConnection(config);
  * @param username
  * @param callback
  */
-
 export function userExist(username: string,
                           callback: (isExist: boolean) => void): void {
   
@@ -60,18 +60,32 @@ export function insertNewUser(username: string,
 
 /**
  * 获取用户密码与当前密码对比 使用加密算法
- * @param username string : 用户名
- * @param callback (passwordDB)=>any : 成功查询到数据库的用户密码时需要执行的回调函数
+ * @param username {string} : 用户名
+ * @param callback {(passwordDB)=>any }: 成功查询到数据库的用户密码时需要执行的回调函数
  * */
 export function getPassword(username: string,
-                            callback: (passwordDB) => any): any {
+                            callback: (passwordDB, msg) => any): any {
   const sql = "select password from users where username = ?";
   let password: string = '';
   
+  //result是执行结果的数组(查找到对应用户的话就是[{password:string}])
   db.query(sql, username, (err: Query.QueryError,
-                           result: RowDataPacket[][] | RowDataPacket[] | OkPacket | OkPacket[] | ResultSetHeader) => {
+                           result: any) => {
+    if (err) {
+      callback('', err.message);
+      return;
+    } else if (result.length !== 1) {
+      callback('', {
+        status: 1,
+        msg   : '未找到用户存在'
+      })
+      return;
+    }
     password = ( result as RowDataPacket )[0].password;
-    callback(password);
+    callback(password, {
+      status: 0,
+      msg   : ''
+    });
   })
 }
 
@@ -80,63 +94,83 @@ export function getPassword(username: string,
  * 登陆或者注销时改变用户的状态
  * @param username {string} 用户名
  * @param status {number} 登陆状态0为注销1为登录
+ * @param callback {(status)=>any} 回调函数
  */
 export function changeStatus(username: string,
-                             status: number) {
+                             status: number,
+                             callback: (status) => any) {
   const sql = "update users set status = ? where username = ?";
   
   db.query(sql, [username, status], (err: Query.QueryError,
-                                     result: RowDataPacket[][] | RowDataPacket[] | OkPacket | OkPacket[] | ResultSetHeader) => {
-    if (err) return {
+                                     result: any) => {
+    if (err) callback({
       status : 1,
       message: err.message
-    };
-    if ('affectedRows' in result && result?.affectedRows !== 1) {
-      return {
+    });
+    if (result?.affectedRows !== 1) {
+      // console.log(`更新用户status状态结果: ${JSON.stringify(Object.entries(result), null, 2)}`)
+      callback({
         status : 1,
         message: '用户登陆已改变'
-      }
+      })
     }
   })
 }
 
 /**
  * 获取用户info的json字符串
- * @param username
- * @param callback
+ * @param username {string} 用户名
+ * @param callback {(info:string)=>any} 回调函数
  */
 export function getUserInfoFromDB(username: string,
-                                  callback: (info: string) => any): any {
+                                  callback: (info: string, msg: {}) => any): any {
   const sql = "select info from users where username = ?";
   let info: string = '';
   
   db.query(sql, username, (err: Query.QueryError,
-                           result: RowDataPacket[][] | RowDataPacket[] | OkPacket | OkPacket[] | ResultSetHeader) => {
-    info = ( result as RowDataPacket )[0].info;
-    callback(info);
+                           result: Array<{ info: string } | undefined>) => {
+    if (err) throw new Error(err.message);
+    if (!result[0]) {
+      callback('', {
+        status: 1,
+        msg   : '未找到不存在的用户的信息'
+      })
+      return;
+    }
+    if (result && result.length > 0) {
+      // console.log(`获取用户info数据结果: ${JSON.stringify(Object.entries(result),null,2)}`)
+      info = result[0].info;
+      callback(info, {
+        status: 0,
+        msg   : "获取用户信息成功"
+      });
+    }
   })
 }
 
 /**
  * 更新用户的info字段
- * @param username
- * @param info
+ * @param username {string} 用户名
+ * @param info {string} new user information
+ * @param callback {(msg: { status: number, message: string }) => any} callback
  */
 export function setUserInfoToDB(username: string,
-                                info: string): any {
+                                info: string,
+                                callback: (msg: { status: number, message: string }) => any): any {
   const sql = "update users set info = ? where username = ?";
   
   db.query(sql, [info, username], (err: Query.QueryError,
-                                   result: RowDataPacket[][] | RowDataPacket[] | OkPacket | OkPacket[] | ResultSetHeader) => {
-    if (err) return {
+                                   result: any) => {
+    if (err) callback({
       status : 1,
       message: err.message
-    };
-    if ('affectedRows' in result && result?.affectedRows !== 1) {
-      return {
+    });
+    if (result.affectedRows === 1) {
+//       console.log(`更新用户info数据结果: ${JSON.stringify(Object.entries(result), null, 2)}`)
+      callback({
         status : 1,
         message: '已成功更新用户信息'
-      }
+      })
     }
   })
 }

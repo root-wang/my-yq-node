@@ -2,7 +2,6 @@ import express from 'express'
 import routes from './routes'
 import cors from 'cors'
 import {expressjwt} from 'express-jwt';
-
 import {userApiRoute, userGetRoute, userPostRoute} from './routes/user';
 
 const app = express();
@@ -29,10 +28,10 @@ app.use((err, req , res, next)=>{
       msg:'无效的token'
     })
   }
-  console.error(err)
+  console.error(err.message);
   res.send({
-    status:500,
-    msg:'未知的错误'
+    status: 500,
+    msg   : err
   })
 })
 
