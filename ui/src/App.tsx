@@ -5,7 +5,6 @@ import {List} from './components/List/List';
 import {Footer} from './components/Footer/Footer';
 import {History} from 'history'
 import {Login} from './components/Login/Login';
-import {log} from "util";
 
 interface appProps {
   history: History

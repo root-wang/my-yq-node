@@ -41,7 +41,7 @@ app.use((err, req , res, next)=>{
 
 //
 
-const port: number = 3077;
+const port: any = process.env.PORT as unknown | 8080;
 
 app.listen(port, async () => {
   console.log(`App is running at http://localhost:${port}`)
