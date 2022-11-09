@@ -3,7 +3,7 @@
  * @Description 用于通过字符串数组的路径获取对象的value
  * @author root_wang
  * @date 2022/10/20
- */
+*/
 
 import {zh} from '../schema/zh-cn';
 

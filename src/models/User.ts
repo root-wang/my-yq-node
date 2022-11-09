@@ -3,7 +3,7 @@ import {LeaveDetail} from './leaveDetail';
 
 
 export class User extends baseClass {
-    
+
     // 用户名
     private username: string;
     // 登陆状态
@@ -41,6 +41,6 @@ export class User extends baseClass {
         });
         this.leave_info_nums = userInfoObj.leave_info_nums;
     }
-    
-    
+
+   
 }
